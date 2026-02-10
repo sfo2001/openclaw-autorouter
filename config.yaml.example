@@ -1,0 +1,103 @@
+# OpenClaw Autorouter - LiteLLM Proxy Configuration
+# Phase 1: Static tier selection via OpenClaw /model command
+#
+# Usage: /model autorouter/fast, /model autorouter/coding, etc.
+# All models point to Ollama (configure OLLAMA_BASE_URL in .env).
+# Only tool-calling-capable models are included (OpenClaw requirement).
+#
+# Copy this file to config.yaml and adjust api_base to your Ollama host.
+
+model_list:
+  # --- Fast tier ---
+  # Qwen3 8B with thinking disabled: tool-capable, lightweight, 32K context
+  # Custom Modelfile (qwen3-32k-fast) injects /no_think in template.
+  # Best for: simple Q&A, classification, short answers, interactive chat
+  - model_name: fast
+    litellm_params:
+      model: ollama_chat/qwen3-32k-fast
+      api_base: http://localhost:11434
+      num_ctx: 32768
+
+  # --- Standard tier ---
+  # Cogito 14B: tool-capable, hybrid reasoning, 128K context
+  # Best for: general tasks, summarization, moderate reasoning
+  - model_name: standard
+    litellm_params:
+      model: ollama_chat/cogito:14b
+      api_base: http://localhost:11434
+      num_ctx: 32768
+
+  # --- Complex tier ---
+  # Cogito 32B: tool-capable, best local agentic model, 128K context
+  # Best for: deep analysis, long-form, multi-step tasks
+  # Note: requires GPU+CPU split (~27GB with 32K ctx), 4-5 tok/s
+  - model_name: complex
+    litellm_params:
+      model: ollama_chat/cogito:32b
+      api_base: http://localhost:11434
+      num_ctx: 32768
+
+  # --- Coding tier ---
+  # Qwen3-Coder-Next 80B/3B MoE: SWE-bench 70.6, 256K context
+  # Best for: code generation, debugging, code review
+  # Warning: 51GB model, runs mostly from RAM, slow cold-load (~15s)
+  - model_name: coding
+    litellm_params:
+      model: ollama_chat/qwen3-coder-next
+      api_base: http://localhost:11434
+      num_ctx: 32768
+
+  # Lighter coding alternative -- Devstral 24B, avoids 51GB cold-load
+  # Note: devstral-small-128k (clip variant) does not support tools in Ollama;
+  # devstral-small-official-128k does.
+  - model_name: coding-light
+    litellm_params:
+      model: ollama_chat/devstral-small-official-128k
+      api_base: http://localhost:11434
+      num_ctx: 32768
+
+  # --- Thinking tier ---
+  # Qwen3 8B with thinking enabled (default): chain-of-thought reasoning
+  # Lighter/faster than cogito:32b reasoning but with internal step-by-step.
+  # Best for: problems benefiting from structured thinking, planning
+  - model_name: thinking
+    litellm_params:
+      model: ollama_chat/qwen3-32k
+      api_base: http://localhost:11434
+      num_ctx: 32768
+
+  # --- Reasoning tier ---
+  # Cogito 32B: tool-capable, hybrid reasoning, 128K context
+  # Best for: math, proofs, formal logic, deep analysis
+  # Note: magistral (24B) was tested but does not emit structured tool_calls --
+  # it inlines function calls as code blocks in content instead.
+  - model_name: reasoning
+    litellm_params:
+      model: ollama_chat/cogito:32b
+      api_base: http://localhost:11434
+      num_ctx: 32768
+
+  # --- Vision tier ---
+  # Qwen3-VL 8B: tool-capable, vision + tools
+  # Best for: image understanding tasks
+  - model_name: vision
+    litellm_params:
+      model: ollama_chat/qwen3-vl:8b-instruct-q4_K_M
+      api_base: http://localhost:11434
+      num_ctx: 32768
+
+litellm_settings:
+  # Per-chunk read timeout for streaming (seconds). Must be high enough for slow
+  # models (complex/reasoning at 4.5 tok/s) and thinking tier (9s thinking delay).
+  request_timeout: 300
+  stream_timeout: 300
+
+router_settings:
+  routing_strategy: simple-shuffle
+  num_retries: 2
+  timeout: 300
+
+general_settings:
+  # Set LITELLM_MASTER_KEY env var or override here
+  # master_key: sk-change-me
+  drop_params: true

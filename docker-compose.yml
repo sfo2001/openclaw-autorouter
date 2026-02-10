@@ -1,0 +1,24 @@
+# Development docker-compose for openclaw-autorouter
+# Usage: cp .env.example .env && edit .env && docker-compose up
+#
+# Requires: Ollama running at OLLAMA_BASE_URL (default: http://localhost:11434)
+
+services:
+  autorouter:
+    build: .
+    container_name: openclaw-autorouter
+    ports:
+      - "4000:4000"
+    volumes:
+      # Mount config and source for live editing during development
+      - ./config.yaml:/app/config.yaml:ro
+      - ./src:/app/src:ro
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-change-me}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434}
+      # Uncomment when adding cloud tiers:
+      # - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: unless-stopped
+    # If your Ollama host is not resolvable by DNS, add an extra_hosts entry:
+    # extra_hosts:
+    #   - "ollama-host:192.168.x.x"
